@@ -11,8 +11,15 @@ import UIKit
 class ItemsViewController: UITableViewController {
     
     var itemStore: ItemStore!
+    var imageStore: ImageStore!
     
-    @IBAction func addNewItem(_ sender: UIButton) {
+    required init?(coder aDecoder: NSCoder) {
+        super.init(coder: aDecoder)
+        
+        navigationItem.leftBarButtonItem = editButtonItem
+    }
+    
+    @IBAction func addNewItem(_ sender: UIBarButtonItem) {
         // Make a new index path for the 0th section, last row
         let newItem = itemStore.createItem()
         if let index = itemStore.allItems.index(of: newItem){
@@ -22,35 +29,20 @@ class ItemsViewController: UITableViewController {
             tableView.insertRows(at: [indexPath], with: .automatic)
         }
     }
-    @IBAction func toggleEditingMode(_ sender: UIButton) {
-        //currently in editing mode
-        if isEditing {
-            //Change test of button to inform user of status
-            sender.setTitle("Edit", for: .normal)
-            
-            //turn off editing mode
-            setEditing(false, animated: true)
-        }else {
-            //Change text of button to inform user of change in status
-            sender.setTitle("Done", for: .normal)
-            
-            //Enter editing mode
-            setEditing(true, animated: true)
-        }
-    }
-    
+       
     override func viewDidLoad() {
         super.viewDidLoad()
         
-        //Get the height of the status bar
-        let statusBarHeight = UIApplication.shared.statusBarFrame.height
-        let insets = UIEdgeInsets(top: statusBarHeight, left: 0, bottom: 0, right: 0)
-        tableView.contentInset = insets
-        tableView.scrollIndicatorInsets = insets
         
         tableView.rowHeight = UITableViewAutomaticDimension
         tableView.estimatedRowHeight = 65
         
+    }
+    
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+        
+        tableView.reloadData()
     }
     
     override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
@@ -90,6 +82,9 @@ class ItemsViewController: UITableViewController {
             let deleteAction = UIAlertAction(title: "Delete", style: .destructive, handler: { (action) -> Void in
                 //remove the item from the store
                 self.itemStore.removeItem(item)
+                
+                //remove the image from the image store
+                self.imageStore.deleteImage(forKey: item.itemKey)
             
                 //remove the row from the table view with an animation
                 self.tableView.deleteRows(at: [indexPath], with: .automatic)
@@ -109,4 +104,21 @@ class ItemsViewController: UITableViewController {
         //update model
         itemStore.moveItem(from: sourceIndexPath.row, to: destinationIndexPath.row)
     }
+    
+    override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
+        //If the trigger is the showItem segue, figure out which row was just tapped
+        switch segue.identifier {
+        case "showItem"?:
+            if let row = tableView.indexPathForSelectedRow?.row {
+                
+                //get the item for this row and pass it
+                let item = itemStore.allItems[row]
+                let detailViewController = segue.destination as! DetailViewController
+                detailViewController.item = item
+                detailViewController.imageStore = imageStore
+            }
+        default:
+            preconditionFailure("Unexpected segue identifier")
+            }
+        }
 }
